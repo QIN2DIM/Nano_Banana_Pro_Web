@@ -73,11 +73,11 @@ export default function GenerateArea() {
 
       {/* 提交中状态 */}
       {isSubmitting && images.length === 0 && (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50/30">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-blue-50/20">
           <div className="relative mb-6">
-            <div className="w-20 h-20 border-4 border-slate-100 border-t-blue-500 rounded-full animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-blue-400 animate-pulse" />
+            <div className="absolute inset-0 bg-blue-500/10 rounded-full animate-ping" />
+            <div className="w-20 h-20 bg-white rounded-full shadow-sm border border-blue-100 flex items-center justify-center relative z-10">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
             </div>
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">正在启动生成任务</h2>

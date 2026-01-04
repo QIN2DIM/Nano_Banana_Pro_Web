@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Check, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle, Loader2, XCircle } from 'lucide-react';
 import { GeneratedImage } from '../../types';
 import { cn } from '../common/Button';
 
@@ -27,7 +27,7 @@ export const ImageCard = React.memo(function ImageCard({
         const opts = typeof image.options === 'string'
           ? JSON.parse(image.options)
           : image.options;
-        return `${opts.aspectRatio} · ${opts.imageSize}`;
+        return `${opts.aspectRatio || '1:1'} · ${opts.imageSize || '1K'}`;
       }
     } catch (e) {}
     return '';
@@ -35,7 +35,8 @@ export const ImageCard = React.memo(function ImageCard({
 
   // 使用 useMemo 优化规格标签解析
   const specParts = useMemo(() => {
-    return (specs || '1K · 1:1').split(' · ');
+    if (!specs) return ['1:1', '1K'];
+    return specs.split(' · ');
   }, [specs]);
 
   return (
@@ -47,22 +48,25 @@ export const ImageCard = React.memo(function ImageCard({
       onClick={() => !isPending && onClick(image)}
     >
       {/* 图片/加载区域 - 统一正方形 */}
-      <div className="relative w-full aspect-square overflow-hidden bg-slate-50">
+      <div className={cn(
+        "relative w-full aspect-square overflow-hidden transition-colors duration-500",
+        isPending ? "bg-blue-50/50" : "bg-slate-50"
+      )}>
         {isPending ? (
-          <div className="w-full h-full flex flex-col items-center justify-center relative">
-            {/* 加载动画 */}
-            <div className="relative mb-3">
-              <div className="w-10 h-10 border-[3px] border-slate-200 border-t-blue-500 rounded-full animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              </div>
+          <div className="w-full h-full flex flex-col items-center justify-center relative p-4">
+            {/* 加载动画 - 参考历史记录面板样式 */}
+            <div className="relative mb-4">
+              <div className="absolute inset-0 bg-blue-500/10 rounded-full animate-ping" />
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin relative z-10" />
             </div>
 
-            {/* 计时显示 */}
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <span className="text-[10px] font-bold font-mono tracking-tight">
-                {elapsed}s
-              </span>
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-sm font-bold text-blue-600 tracking-tight">生成中</span>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-100/50 rounded-full border border-blue-200/50">
+                <span className="text-[10px] font-bold font-mono text-blue-500 tabular-nums">
+                  {elapsed}s
+                </span>
+              </div>
             </div>
 
             {/* 选择框 (正在生成时也可以选择) */}
@@ -117,9 +121,12 @@ export const ImageCard = React.memo(function ImageCard({
             </div>
           </div>
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-red-400 p-4">
-            <AlertCircle className="w-8 h-8 mb-2" />
-            <span className="text-xs font-medium">生成失败</span>
+          <div className="w-full h-full flex flex-col items-center justify-center bg-red-50/50 p-4 transition-colors duration-500">
+            <div className="relative mb-3">
+              <div className="absolute inset-0 bg-red-500/10 rounded-full animate-pulse" />
+              <XCircle className="w-10 h-10 text-red-400 relative z-10" />
+            </div>
+            <span className="text-sm font-bold text-red-500 tracking-tight">生成失败</span>
           </div>
         )}
       </div>
