@@ -2,7 +2,7 @@
   "name": "nano-banana-pro-frontend",
   "private": true,
   "version": "1.0.0",
-  "description": "NanoBananaPro - 批量图片生成应用前端",
+  "description": "大香蕉图片生成工具 - 批量图片生成应用前端",
   "type": "module",
   "scripts": {
     "dev": "vite --host",

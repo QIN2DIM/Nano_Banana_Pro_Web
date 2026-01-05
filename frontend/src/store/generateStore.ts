@@ -81,19 +81,21 @@ export const useGenerateStore = create<GenerateState>()(
             }
         }));
 
-        set({
+        set((state) => ({
             currentTab: 'generate',
             taskId,
             status: 'processing',
             totalCount,
             completedCount: 0,
-            images: placeholders,
+            // 将新生成的占位符放在最前面，保留之前的生成结果（可选，根据用户习惯调整）
+            // 这里我们选择保留之前的，这样用户能看到历史生成的图片
+            images: [...placeholders, ...state.images].slice(0, 100), 
             error: null,
             selectedIds: new Set(),
             startTime: Date.now(),
             connectionMode: 'websocket',  // 初始使用 WebSocket
             lastMessageTime: Date.now()
-        });
+        }));
       },
 
       updateProgress: (completedCount, image) => set((state) => {

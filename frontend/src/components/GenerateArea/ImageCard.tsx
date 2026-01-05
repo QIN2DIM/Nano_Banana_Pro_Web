@@ -18,7 +18,7 @@ export const ImageCard = React.memo(function ImageCard({
   onClick,
   elapsed = '0.0'
 }: ImageCardProps) {
-  const isPending = image.status === 'pending';
+  const isPending = image.status === 'pending' || !image.url;
 
   // 使用 useMemo 优化规格信息解析
   const specs = useMemo(() => {
@@ -30,8 +30,13 @@ export const ImageCard = React.memo(function ImageCard({
         return `${opts.aspectRatio || '1:1'} · ${opts.imageSize || '1K'}`;
       }
     } catch (e) {}
+    // 如果是 pending 状态，尝试从 options 对象中获取（针对刚生成的占位符）
+    if (isPending && (image as any).options) {
+      const opts = (image as any).options;
+      return `${opts.aspectRatio || '1:1'} · ${opts.imageSize || '1K'}`;
+    }
     return '';
-  }, [image.options]);
+  }, [image.options, isPending]);
 
   // 使用 useMemo 优化规格标签解析
   const specParts = useMemo(() => {
@@ -53,15 +58,24 @@ export const ImageCard = React.memo(function ImageCard({
         isPending ? "bg-blue-50/50" : "bg-slate-50"
       )}>
         {isPending ? (
-          <div className="w-full h-full flex flex-col items-center justify-center relative p-4">
-            {/* 加载动画 - 参考历史记录面板样式 */}
-            <div className="relative mb-4">
-              <div className="absolute inset-0 bg-blue-500/10 rounded-full animate-ping" />
-              <Loader2 className="w-10 h-10 text-blue-500 animate-spin relative z-10" />
+          <div className="w-full h-full flex flex-col items-center justify-center relative p-4 bg-blue-50/30">
+            {/* 加载动画 - 强化版 */}
+            <div className="relative mb-4 flex items-center justify-center">
+              <div className="absolute w-16 h-16 bg-blue-500/10 rounded-full animate-ping" />
+              <div className="absolute w-12 h-12 border-2 border-blue-100 rounded-full" />
+              <div className="absolute w-12 h-12 border-t-2 border-blue-500 rounded-full animate-spin" />
+              <Loader2 className="w-6 h-6 text-blue-500 animate-pulse relative z-10" />
             </div>
 
             <div className="flex flex-col items-center gap-2">
-              <span className="text-sm font-bold text-blue-600 tracking-tight">生成中</span>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-1 h-1 bg-blue-600 rounded-full animate-bounce" />
+                </div>
+                <span className="text-sm font-bold text-blue-600 tracking-tight">正在生成</span>
+              </div>
               <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-100/50 rounded-full border border-blue-200/50">
                 <span className="text-[10px] font-bold font-mono text-blue-500 tabular-nums">
                   {elapsed}s

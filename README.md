@@ -1,161 +1,103 @@
-# Banana Pro Web (大香蕉图片生成工具)
+# 大香蕉图片生成工具 (Banana Pro Web)
+
+<p align="center">
+  <img src="assets/preview.png" alt="Banana Pro Web 预览" width="800">
+</p>
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.3.1-blue.svg)
 ![Go](https://img.shields.io/badge/Go-1.24.3-00ADD8.svg)
 ![Gemini](https://img.shields.io/badge/GenAI%20SDK-1.40.0-orange.svg)
 
-Banana Pro Web 是一个高性能、易扩展的批量图片生成平台，专为创意工作者设计。它基于 Google Gemini API，支持高分辨率（最高 4K）的文生图与图生图功能，并提供直观的批量任务管理界面。
+大香蕉图片生成工具 是一个高性能、易扩展的批量图片生成平台，专为创意工作者设计。它基于 Google Gemini API，支持高分辨率（最高 4K）的文生图与图生图功能，并提供直观的批量任务管理界面。
 
 ## 🌟 核心特性
 
 - **🚀 极速生成**：基于 Go 语言后端与 Worker 池化技术，支持多任务并发处理。
-- **🎨 4K 超清支持**：深度优化 Gemini 3.0 模型参数，完美支持 16:9、4:3 等多种画幅的 4K 超清生成。
+- **🎨 4K 超清支持**：深度优化 Gemini 3.0 模型参数，支持多种画幅的 4K 超清生成。
 - **📸 智能图生图**：支持多张参考图输入，精准控制生成风格与内容。
 - **📦 批量处理**：一键开启批量生成模式，实时进度监控。
-- **💾 历史记录管理**：完整的任务历史追踪，支持失败任务一键重试与本地缓存恢复。
+- **💾 历史记录管理**：完整的任务历史追踪，支持失败任务重试与本地缓存恢复。
 - **🔌 灵活扩展**：模块化 Provider 设计，可轻松接入其他主流 AI 模型。
 
-## �️ 界面预览
+## 🛠️ 界面布局
 
 系统采用经典的**三栏式响应式布局**：
 1. **左侧配置面板**：实时调整模型参数（比例、分辨率、生成数量、参考图上传）。
 2. **中间生成区域**：展示当前生成任务的实时状态、倒计时、进度条及生成结果。
-3. **右侧历史面板**：持久化存储历史生成记录，支持瀑布流预览、大图查看及记录删除。
+3. **右侧历史面板**：持久化存储历史生成记录，支持瀑布流预览、大图查看。
 
-## �🛠️ 技术栈
+## 💻 技术实现
 
 ### 后端 (Backend)
-- **语言**: Go v1.24.3 (高性能逻辑处理)
-- **框架**: Gin v1.11.0 (API 路由管理)
-- **模型集成**: Google GenAI SDK v1.40.0 (Gemini 模型对接)
-- **数据库**: SQLite + GORM v1.25.12 (任务与元数据存储)
-- **存储**: 阿里云 OSS / 本地存储 (图片异步存储)
-- **配置管理**: Viper v1.21.0 (多格式配置支持)
+- **Go v1.24.3**: 高性能核心逻辑处理
+- **Gin v1.11.0**: API 路由与中间件管理
+- **Google GenAI SDK v1.40.0**: Gemini 模型深度对接
+- **SQLite + GORM v1.25.12**: 任务与图片元数据持久化
+- **Viper v1.21.0**: 多环境配置平滑切换
+- **Worker Pool**: 异步任务并发调度系统
 
 ### 前端 (Frontend)
-- **框架**: React v18.3.1 (UI 开发框架)
-- **构建工具**: Vite v6.0.7 (极速构建工具)
-- **状态管理**: Zustand v5.0.2 (轻量级状态管理)
-- **样式**: Tailwind CSS v3.4.17 (响应式 UI 设计)
-- **图标**: Lucide React v0.468.0 (矢量图标库)
-- **网络请求**: Axios + React Query (数据请求与缓存)
-- **类型系统**: TypeScript v5.6.3 (代码类型安全)
+- **React v18.3.1**: 现代 UI 组件化开发框架
+- **Vite v6.0.7**: 毫秒级热更新构建工具
+- **Zustand v5.0.2**: 响应式轻量级状态管理
+- **Tailwind CSS v3.4.17**: 原子化响应式样式系统
+- **TypeScript v5.6.3**: 全链路类型安全保障
+- **WebSocket**: 任务进度实时推送
 
-## 🚀 快速开始
+## 🚀 快速启动
 
-### 1. 克隆项目
-```bash
-git clone git@github.com:ShellMonster/Nano_Banana_Pro_Web.git
-cd Nano_Banana_Pro_Web
-```
+### 1. 环境准备
+- Go 1.22+
+- Node.js 18+
+- Google Gemini API Key
 
-### 2. 后端启动 (开发环境)
+### 2. 后端配置
 ```bash
 cd backend
-# 修改 internal/config/config.yaml 中的 providers.gemini.api_key
-go mod download
+# 编辑配置文件
+# 在 configs/config.yaml 中填入您的 providers.gemini.api_key
 go run cmd/server/main.go
 ```
-后端服务默认运行在 `http://localhost:8080`。
 
-### 3. 前端启动 (开发环境)
+### 3. 前端启动
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-前端开发环境默认运行在 `http://localhost:5173`。
 
-### 4. 生产环境部署
-**后端编译：**
-```bash
-cd backend
-go build -o server cmd/server/main.go
-./server
-```
-**前端打包：**
-```bash
-cd frontend
-npm run build
-# 产物在 dist 目录，可使用 Nginx 托管
-```
+## ⚙️ 核心配置项
 
-## ⚙️ 配置说明
-
-### 后端配置 (`backend/configs/config.yaml`)
-
-| 配置项 | 描述 | 默认值 / 示例 |
-| :--- | :--- | :--- |
-| `server.port` | 后端服务监听端口 | `8080` |
-| `database.path` | SQLite 数据库文件路径 | `storage/local/service.db` |
-| `storage.local_dir` | 本地图片存储根目录 | `storage/local` |
-| `storage.oss.enabled` | 是否启用阿里云 OSS | `false` |
-| `providers.gemini.api_key` | **[必填]** Google Gemini API Key | `"YOUR_KEY"` |
-| `providers.gemini.api_base` | Gemini API 代理地址 | `https://...` |
-
-### 前端配置 (`frontend/.env.development`)
+### 后端 (`backend/configs/config.yaml`)
 
 | 配置项 | 描述 | 示例 |
 | :--- | :--- | :--- |
-| `VITE_API_URL` | 后端 API 服务地址 | `http://localhost:8080/api/v1` |
-| `VITE_WS_URL` | WebSocket 通信地址 | `ws://localhost:8080/api/v1` |
+| `server.port` | 服务监听端口 | `8080` |
+| `storage.local_dir` | 图片存储路径 | `storage/local` |
+| `providers.gemini.api_key` | Gemini API 密钥 | `AIzaSy...` |
 
-## 📡 API 接口概览
+### 前端 (`frontend/.env.development`)
 
-| 路径 | 方法 | 描述 |
+| 配置项 | 描述 | 示例 |
 | :--- | :--- | :--- |
-| `/health` | `GET` | 健康检查 |
-| `/api/v1/tasks/generate` | `POST` | 文生图任务提交 (JSON) |
-| `/api/v1/tasks/generate-with-images` | `POST` | 图生图任务提交 (Multipart) |
-| `/api/v1/tasks/:task_id` | `GET` | 获取任务实时进度 |
-| `/api/v1/images` | `GET` | 获取历史图片列表 |
-| `/api/v1/images/:id` | `DELETE` | 删除单张图片记录 |
-| `/storage/*` | `GET` | 静态图片资源访问 |
+| `VITE_API_URL` | 后端 API 地址 | `http://localhost:8080/api/v1` |
 
 ## 📂 项目结构
-
 ```text
 .
-├── backend/               # Go 后端代码
-│   ├── cmd/               # 程序入口
+├── backend/               # Go 后端核心代码
+│   ├── cmd/               # 程序入口 (main.go)
 │   ├── configs/           # 配置文件 (YAML)
-│   ├── internal/          # 核心业务逻辑
-│   │   ├── api/           # API 处理器
-│   │   ├── model/         # 数据库模型与 GORM
-│   │   ├── provider/      # AI 模型适配器 (Gemini 等)
-│   │   └── worker/        # 并发任务执行池
-│   └── storage/           # 数据与图片持久化目录
+│   ├── internal/          # 内部业务逻辑封装
+│   └── storage/           # 本地持久化存储 (DB & Images)
 └── frontend/              # React 前端代码
-    ├── src/
-    │   ├── components/    # UI 组件 (生成区、历史区等)
-    │   ├── hooks/         # 自定义 Hook (生成逻辑封装)
-    │   ├── services/      # API 请求封装
-    │   └── store/         # Zustand 状态管理
-    └── public/            # 静态资源
+    ├── src/               # 源码目录
+    │   ├── components/    # 业务 UI 组件
+    │   ├── store/         # 状态管理 (Zustand)
+    │   └── hooks/         # 自定义 React Hooks
+    └── public/            # 静态资源文件
 ```
 
-## 🛠️ 开发与扩展
-
-### 如何添加新的 AI 模型 Provider？
-1. 在 `backend/internal/provider/` 下实现 `Provider` 接口。
-2. 在 `provider.go` 的 `InitProviders` 函数中添加对应的工厂分支。
-3. 在配置文件中添加相应的配置项。
-
-### 并发性能优化
-可以通过修改 `backend/cmd/server/main.go` 中的 `worker.InitPool` 参数来调整并发线程数。推荐设置为 CPU 核心数的 2-3 倍。
-
-## ❓ 常见问题 (FAQ)
-
-**Q: 为什么生成提示 429 Too Many Requests？**
-A: 这是 Gemini API 的频率限制。请检查 API Key 的配额，或在后端配置中更换更高级别的 API Key。
-
-**Q: 图片生成成功但前端不显示？**
-A: 请检查后端 `storage` 目录的读写权限，以及前端 `.env` 中的 `VITE_API_URL` 是否正确指向了后端地址。
-
-## � 开源协议
-
+## 📄 开源协议
 本项目采用 [MIT License](LICENSE) 协议开源。
-
----
-*Created by [ShellMonster](https://github.com/ShellMonster)*

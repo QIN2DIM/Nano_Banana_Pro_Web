@@ -37,8 +37,9 @@ export function ImageGrid({ onPreview }: ImageGridProps) {
       setElapsedTime(seconds);
 
       // 只要有正在处理的图片，继续更新
+      // 检查当前显示的图片中是否还有 pending 状态的
       const hasPendingImages = images.some(img => img.status === 'pending');
-      if (hasPendingImages) {
+      if (hasPendingImages || status === 'processing') {
         rafRef.current = requestAnimationFrame(updateTimer);
       } else {
         rafRef.current = null;
