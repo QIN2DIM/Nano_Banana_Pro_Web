@@ -1,11 +1,12 @@
-name: Release
+name: 自动打包发布
 on:
   push:
     tags:
       - 'v*'
 
 jobs:
-  release:
+  build-and-release:
+    name: 构建并发布 - ${{ matrix.platform }}
     permissions:
       contents: write
     strategy:
@@ -15,59 +16,52 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - name: Checkout repository
+      - name: 拉取源代码
         uses: actions/checkout@v4
 
-      - name: Install dependencies (Ubuntu only)
+      - name: 安装系统依赖 (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 
-      - name: Setup Node.js
+      - name: 安装 Node.js 环境
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
           cache-dependency-path: './desktop/package-lock.json'
 
-      - name: Setup Rust
+      - name: 安装 Rust 环境
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Rust cache
+      - name: Rust 缓存
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './desktop/src-tauri -> target'
 
-      - name: Setup Go
+      - name: 安装 Go 环境
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
           cache-dependency-path: './backend/go.sum'
 
-      - name: Build Go Sidecar (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: |
-          mkdir -p desktop/src-tauri/bin
-          cd backend
-          # Build for both Intel and Apple Silicon
-          GOOS=darwin GOARCH=amd64 go build -o ../desktop/src-tauri/bin/server-x86_64-apple-darwin cmd/server/main.go
-          GOOS=darwin GOARCH=arm64 go build -o ../desktop/src-tauri/bin/server-aarch64-apple-darwin cmd/server/main.go
-
-      - name: Build Go Sidecar (Windows)
-        if: matrix.platform == 'windows-latest'
+      - name: 准备 Go 边车程序
         shell: bash
         run: |
           mkdir -p desktop/src-tauri/bin
-          cd backend
-          GOOS=windows GOARCH=amd64 go build -o ../desktop/src-tauri/bin/server-x86_64-pc-windows-msvc.exe cmd/server/main.go
+          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
+            cd backend && GOOS=windows GOARCH=amd64 go build -o ../desktop/src-tauri/bin/server-x86_64-pc-windows-msvc.exe cmd/server/main.go
+          else
+            cd backend && GOOS=darwin GOARCH=arm64 go build -o ../desktop/src-tauri/bin/server-aarch64-apple-darwin cmd/server/main.go
+            cd .. && cd backend && GOOS=darwin GOARCH=amd64 go build -o ../desktop/src-tauri/bin/server-x86_64-apple-darwin cmd/server/main.go
+          fi
 
-      - name: Install frontend dependencies
-        run: |
-          cd desktop
-          npm install
+      - name: 安装前端依赖
+        run: npm install
+        working-directory: ./desktop
 
-      - name: Build Tauri App
+      - name: 构建并发布到 GitHub Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -89,3 +83,5 @@ jobs:
             *由 GitHub Actions 自动构建发布 - ${{ github.event.repository.updated_at }}*
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true
+          includeRelease: true
