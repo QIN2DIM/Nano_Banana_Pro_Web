@@ -181,6 +181,29 @@ export const ImagePreview = React.memo(function ImagePreview({
         setShowDeleteConfirm(false);
     }, []);
 
+    // 处理复制图片
+    const handleCopyImage = useCallback(async () => {
+        if (!image?.url) return;
+
+        try {
+            // 1. 获取图片 Blob
+            const response = await fetch(image.url);
+            const blob = await response.blob();
+
+            // 2. 检查浏览器是否支持 ClipboardItem (现代浏览器)
+            if (typeof ClipboardItem !== 'undefined') {
+                const item = new ClipboardItem({ [blob.type]: blob });
+                await navigator.clipboard.write([item]);
+                toast.success('图片已复制到剪贴板');
+            } else {
+                throw new Error('当前浏览器不支持图片复制');
+            }
+        } catch (error) {
+            console.error('复制图片失败:', error);
+            toast.error('复制图片失败，请尝试右键另存为');
+        }
+    }, [image?.url]);
+
     // 处理复制提示词 - 优先使用同步方案，速度最快
     const handleCopyPrompt = useCallback(() => {
         if (!image?.prompt) return;
@@ -345,6 +368,21 @@ export const ImagePreview = React.memo(function ImagePreview({
                         </div>
                     )}
 
+                    {/* 悬浮复制按钮 - 固定在展示区右上角，不随图片缩放 */}
+                    {fullImageLoaded && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyImage();
+                            }}
+                            className="absolute top-6 left-6 z-30 p-2.5 bg-white/90 hover:bg-white text-slate-700 rounded-xl shadow-xl border border-white/50 backdrop-blur-md transition-all active:scale-95 group flex items-center gap-2"
+                            title="复制图片"
+                        >
+                            <Copy className="w-4 h-4" />
+                            <span className="text-[11px] font-black pr-1">复制图片</span>
+                        </button>
+                    )}
+
                     <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 p-1.5 bg-white/90 backdrop-blur-xl border border-white/50 rounded-2xl shadow-2xl">
                         <button onClick={() => performZoom(Math.max(0.25, scale - 0.25))} className="p-2.5 hover:bg-white rounded-xl transition-all text-slate-600"><ZoomOut className="w-4 h-4" /></button>
                         <div className="w-px h-4 bg-slate-200 mx-1" />
@@ -360,6 +398,8 @@ export const ImagePreview = React.memo(function ImagePreview({
                             transition: isDragging ? 'none' : 'transform 0.15s cubic-bezier(0.2, 0, 0.2, 1)'
                         }}
                     >
+
+
                         {/* 缩略图占位 (模糊) */}
                         {!fullImageLoaded && (
                             <img 
