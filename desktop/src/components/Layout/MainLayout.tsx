@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy, useCallback } from 'react';
 import { Header } from './Header';
 import { FloatingTabSwitch } from './FloatingTabSwitch';
 import GenerateArea from '../GenerateArea';
@@ -91,10 +91,49 @@ export default function MainLayout() {
 
   // 任务恢复逻辑：由历史记录加载后的 syncWithGenerateStore 处理
 
-  if (!isHydrated) return null;
+  const isTauri = typeof window !== 'undefined' && Boolean((window as any).__TAURI_INTERNALS__);
+  const handleWindowDragStart = useCallback((e: React.MouseEvent) => {
+    if (!isTauri) return;
+    if (e.button !== 0) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    import('@tauri-apps/api/window')
+      .then(({ getCurrentWindow }) => getCurrentWindow().startDragging())
+      .catch(() => {});
+  }, [isTauri]);
+
+  if (!isHydrated) {
+    return (
+      <div className="flex flex-col h-screen bg-[#f8fafc] overflow-hidden font-sans antialiased text-slate-900">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+              <span className="text-white font-bold text-xl tracking-tighter">B</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm font-bold text-slate-500">
+              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              <span>正在启动…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-[#f8fafc] overflow-hidden font-sans antialiased text-slate-900">
+      {/* Tauri：窗口边缘拖拽条（避免内容区铺满导致无法拖动窗口） */}
+      {isTauri && (
+        <>
+          <div className="fixed top-0 left-0 right-0 h-[10px] z-[1000]" data-tauri-drag-region onMouseDown={handleWindowDragStart} />
+          <div className="fixed bottom-0 left-0 right-0 h-[10px] z-[1000]" data-tauri-drag-region onMouseDown={handleWindowDragStart} />
+          <div className="fixed top-0 bottom-0 left-0 w-[10px] z-[1000]" data-tauri-drag-region onMouseDown={handleWindowDragStart} />
+          <div className="fixed top-0 bottom-0 right-0 w-[10px] z-[1000]" data-tauri-drag-region onMouseDown={handleWindowDragStart} />
+        </>
+      )}
+
       <Header />
 
       {isBackendHealthy === false && (

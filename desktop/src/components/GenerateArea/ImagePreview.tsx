@@ -274,6 +274,7 @@ export const ImagePreview = React.memo(function ImagePreview({
             isOpen={!!image} 
             onClose={onClose} 
             hideHeader={true} 
+            variant="unstyled"
             className="max-w-[95vw] md:max-w-7xl h-[90vh] md:h-[90vh] flex flex-col pointer-events-none p-0 overflow-visible"
         >
             <div className="bg-white rounded-xl shadow-2xl overflow-hidden w-full h-full flex flex-col md:flex-row pointer-events-auto relative">

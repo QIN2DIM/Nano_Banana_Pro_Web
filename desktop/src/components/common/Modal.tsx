@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { cn } from './Button';
 
 interface ModalProps {
   isOpen: boolean;
@@ -9,9 +10,18 @@ interface ModalProps {
   title?: string;
   className?: string;
   hideHeader?: boolean;
+  variant?: 'default' | 'unstyled';
 }
 
-export function Modal({ isOpen, onClose, children, title, className = '', hideHeader = false }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  children,
+  title,
+  className = '',
+  hideHeader = false,
+  variant = 'default'
+}: ModalProps) {
   // 当弹窗打开时，禁止背景滚动
   useEffect(() => {
     if (isOpen) {
@@ -36,17 +46,14 @@ export function Modal({ isOpen, onClose, children, title, className = '', hideHe
       
       {/* 弹窗主体 - 样式与侧边栏对齐 */}
       <div 
-        className={`
-          relative w-full flex flex-col
-          bg-white/80 backdrop-blur-2xl
-          rounded-[2.5rem] border border-white/50 
-          shadow-[0_24px_80px_-12px_rgba(0,0,0,0.15)]
-          animate-in fade-in zoom-in-95 duration-300
-          max-h-[90vh]
-          ${className}
-        `}
+        className={cn(
+          'relative w-full flex flex-col animate-in fade-in zoom-in-95 duration-300',
+          variant === 'default' &&
+            'bg-white/80 backdrop-blur-2xl rounded-[2.5rem] border border-white/50 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.15)] max-h-[90vh]',
+          className
+        )}
       >
-        {!hideHeader && (
+        {variant === 'default' && !hideHeader && (
             <div className="flex items-center justify-between px-10 py-8 border-b border-slate-200/20 flex-shrink-0">
                 {title ? (
                     <h3 className="text-2xl font-black text-slate-900 tracking-tighter">
@@ -63,9 +70,13 @@ export function Modal({ isOpen, onClose, children, title, className = '', hideHe
         )}
         
         {/* 内容区域 - 确保可滚动且不被遮挡 */}
-        <div className={`flex-1 overflow-y-auto scrollbar-none ${hideHeader ? '' : 'px-10 py-8 pb-12'}`}>
-          {children}
-        </div>
+        {variant === 'default' ? (
+          <div className={cn('flex-1 overflow-y-auto scrollbar-none', hideHeader ? '' : 'px-10 py-8 pb-12')}>
+            {children}
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>,
     document.body
