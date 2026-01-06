@@ -26,6 +26,41 @@
 
 ## 🏗️ 技术架构
 
+### 核心系统流程图
+```mermaid
+graph TD
+    subgraph "前端层 (React + Zustand)"
+        UI[用户交互界面]
+        State[Zustand 状态管理]
+        AssetProtocol[asset:// 资源加载]
+    end
+
+    subgraph "桌面容器层 (Tauri 2.0 / Rust)"
+        TauriBridge[Rust 桥接层]
+        IPC[IPC 通讯优化]
+        FS[本地文件访问权限]
+    end
+
+    subgraph "推理后端层 (Go Sidecar)"
+        GoServer[Gin API 服务]
+        WorkerPool[并发任务池]
+        GeminiSDK[Google GenAI SDK]
+        SQLite[(SQLite 任务存储)]
+    end
+
+    UI <--> State
+    State <--> IPC
+    IPC <--> TauriBridge
+    TauriBridge <--> GoServer
+    GoServer <--> WorkerPool
+    WorkerPool <--> GeminiSDK
+    WorkerPool <--> SQLite
+    GeminiSDK <--> |Imagen 3.0| Cloud[Google AI Cloud]
+    GoServer -.-> |保存图像| FS
+    FS -.-> |映射资源| AssetProtocol
+    AssetProtocol -.-> |极速显示| UI
+```
+
 项目采用“三层架构”设计，确保了性能与扩展性的平衡：
 
 1. **前端 (React + Zustand)**：负责响应式 UI 与状态管理，提供流畅的用户交互。
