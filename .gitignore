@@ -33,6 +33,7 @@ frontend/yarn-error.log*
 
 # General
 *.log
+*.dmg
 temp/
 tmp/
 开发进度.md
