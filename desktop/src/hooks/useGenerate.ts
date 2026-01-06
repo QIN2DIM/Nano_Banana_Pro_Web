@@ -7,7 +7,8 @@ import { setUpdateSource, getUpdateSource, clearUpdateSource } from '../store/up
 import { toast } from '../store/toastStore';
 
 // WebSocket 超时时间（毫秒）- 超过此时间无消息则启动轮询
-const WS_TIMEOUT = 15000;
+// 本地后端通常不会推实时进度，过长会导致用户“卡住”的观感
+const WS_TIMEOUT = 3000;
 // 轮询间隔（毫秒）
 const POLL_INTERVAL = 3000;
 // 最大轮询重试次数（降低到 6 次，避免用户等待过久）
@@ -72,13 +73,10 @@ export function useGenerate() {
       return;
     }
 
-    // 竞态条件修复：检查是否有其他更新源正在运行
+    // 进入 polling 模式时由 polling 接管更新源（避免 websocket 标记残留导致轮询无法启动）
     if (getUpdateSource() === 'websocket') {
-      console.log('[竞态条件防护] WebSocket 仍在活跃，等待其完成');
-      return;
+      setUpdateSource(null);
     }
-
-    // 设置当前更新源为 polling
     setUpdateSource('polling');
 
     isPollingRef.current = true;
@@ -116,6 +114,14 @@ export function useGenerate() {
 
         // 检查任务是否完成
         if (taskData.status === 'completed' || taskData.status === 'failed') {
+          if (
+            taskData.status === 'completed' &&
+            taskData.totalCount > 1 &&
+            (taskData.images?.length || 0) < taskData.totalCount
+          ) {
+            toast.info(`本次请求期望生成 ${taskData.totalCount} 张，但后端仅返回 ${taskData.images?.length || 0} 张`);
+          }
+
           stopPolling();
           if (taskData.status === 'completed') {
             storeRef.current.completeTask();

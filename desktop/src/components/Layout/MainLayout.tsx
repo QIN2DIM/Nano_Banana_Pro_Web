@@ -91,10 +91,34 @@ export default function MainLayout() {
 
   // 任务恢复逻辑：由历史记录加载后的 syncWithGenerateStore 处理
 
+  const isTauri = typeof window !== 'undefined' && Boolean((window as any).__TAURI_INTERNALS__);
+
   if (!isHydrated) return null;
 
   return (
     <div className="flex flex-col h-screen bg-[#f8fafc] overflow-hidden font-sans antialiased text-slate-900">
+      {/* macOS overlay + transparent 下没有系统拖动区：提供全局“边缘拖动条”，且始终在弹窗之上 */}
+      {isTauri && (
+        <>
+          <div
+            className="fixed top-0 left-0 right-0 h-2 z-[10000] [-webkit-app-region:drag]"
+            data-tauri-drag-region
+          />
+          <div
+            className="fixed bottom-0 left-0 right-0 h-2 z-[10000] [-webkit-app-region:drag]"
+            data-tauri-drag-region
+          />
+          <div
+            className="fixed top-0 bottom-0 left-0 w-2 z-[10000] [-webkit-app-region:drag]"
+            data-tauri-drag-region
+          />
+          <div
+            className="fixed top-0 bottom-0 right-0 w-2 z-[10000] [-webkit-app-region:drag]"
+            data-tauri-drag-region
+          />
+        </>
+      )}
+
       <Header />
 
       {isBackendHealthy === false && (
@@ -107,11 +131,6 @@ export default function MainLayout() {
       )}
 
       <main className="flex-1 flex overflow-hidden p-4 gap-4 relative">
-        {/* Tauri：给主区域加一层拖拽背景（不盖住子元素点击），支持从窗口边缘拖动窗口 */}
-        {typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ && (
-          <div className="absolute inset-0" data-tauri-drag-region />
-        )}
-
         {/* 桌面端：左侧配置栏 */}
         <aside
             className={`

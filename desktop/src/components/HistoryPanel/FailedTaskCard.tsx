@@ -94,7 +94,7 @@ export const FailedTaskCard = React.memo(function FailedTaskCard({ task, onClick
                 return {
                     icon: <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />,
                     title: '生成中',
-                    description: `正在生成第 ${task.completedCount + 1} 张图片`,
+                    description: `生成中：第 ${task.completedCount + 1} 张图片`,
                     bgColor: 'bg-blue-50',
                     borderColor: 'border-blue-200'
                 };
@@ -124,6 +124,35 @@ export const FailedTaskCard = React.memo(function FailedTaskCard({ task, onClick
                 };
         }
     }, [task.status, task.errorMessage, task.completedCount, task.totalCount]);
+
+    const snapshotLabels = React.useMemo(() => {
+        const raw = (task as any).options as string | undefined;
+        if (!raw) return { imageSizeLabel: '—', aspectRatioLabel: '—' };
+
+        try {
+            const parsed = JSON.parse(raw) as any;
+            const aspectRatio =
+                parsed?.aspectRatio ||
+                parsed?.aspect_ratio ||
+                parsed?.aspect;
+            const imageSize =
+                parsed?.imageSize ||
+                parsed?.resolution_level ||
+                parsed?.image_size;
+
+            const imageSizeLabel = typeof imageSize === 'string' && imageSize.trim()
+                ? imageSize.trim().toUpperCase()
+                : '—';
+            const aspectRatioLabel = typeof aspectRatio === 'string' && aspectRatio.trim()
+                ? aspectRatio.trim()
+                : '—';
+
+            return { imageSizeLabel, aspectRatioLabel };
+        } catch {
+            // 兼容旧版本：config_snapshot 可能是 "Model: xxx" 这类非 JSON 文本
+            return { imageSizeLabel: '—', aspectRatioLabel: '—' };
+        }
+    }, [(task as any).options]);
 
     return (
         <div
@@ -237,14 +266,11 @@ export const FailedTaskCard = React.memo(function FailedTaskCard({ task, onClick
                     <div className="flex items-center justify-between text-[9px] text-gray-400 pt-1">
                         <span className="hidden sm:block">{formatDateTime(task.createdAt)}</span>
                         <div className="flex items-center gap-1 ml-auto">
-                            <span className={`
-                                px-1.5 py-0.5 rounded font-black tracking-tighter border
-                                ${task.status === 'failed' ? 'bg-red-50 text-red-600 border-red-100/50' : ''}
-                                ${task.status === 'processing' ? 'bg-yellow-50 text-yellow-600 border-yellow-100/50' : ''}
-                                ${task.status === 'partial' ? 'bg-orange-50 text-orange-600 border-orange-100/50' : ''}
-                                ${task.status === 'completed' ? 'bg-gray-100 text-gray-500 border-gray-200/50' : ''}
-                            `}>
-                                {task.status.toUpperCase()}
+                            <span className="bg-blue-50 text-blue-600 px-1 py-0.5 rounded font-black tracking-tighter border border-blue-100/50">
+                                {snapshotLabels.imageSizeLabel}
+                            </span>
+                            <span className="bg-slate-100 text-slate-500 px-1 py-0.5 rounded font-bold tracking-tighter border border-slate-200/50">
+                                {snapshotLabels.aspectRatioLabel}
                             </span>
                         </div>
                     </div>

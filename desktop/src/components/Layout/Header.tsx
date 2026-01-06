@@ -15,10 +15,10 @@ export function Header() {
 
   return (
     <header 
-      className="h-16 flex items-center justify-between px-4 sm:px-8 z-50 sticky top-0 bg-[#f8fafc]/50 backdrop-blur-md pt-2"
+      className="h-16 flex items-center justify-between px-4 sm:px-8 z-50 sticky top-0 bg-[#f8fafc]/50 backdrop-blur-md pt-2 relative"
     >
       {/* 这里的 data-tauri-drag-region 放在背景层，确保不干扰子元素点击 */}
-      <div className="absolute inset-0" data-tauri-drag-region />
+      <div className="absolute inset-0 [-webkit-app-region:drag]" data-tauri-drag-region />
       
       {/* 左侧：Logo */}
       <div className="flex items-center gap-2 sm:gap-3 pointer-events-none relative z-10">
@@ -38,6 +38,7 @@ export function Header() {
               ? "bg-white text-blue-600 shadow-sm"
               : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
           )}
+          style={{ WebkitAppRegion: 'no-drag' } as any}
         >
           <LayoutGrid className="w-4 h-4" />
           <span>生成</span>
@@ -50,6 +51,7 @@ export function Header() {
               ? "bg-white text-blue-600 shadow-sm"
               : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
           )}
+          style={{ WebkitAppRegion: 'no-drag' } as any}
         >
           <History className="w-4 h-4" />
           <span>历史</span>
@@ -62,6 +64,7 @@ export function Header() {
             onClick={() => setIsSettingsOpen(true)}
             className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-white rounded-xl transition-all duration-300 shadow-none hover:shadow-sm"
             title="设置"
+            style={{ WebkitAppRegion: 'no-drag' } as any}
           >
             <Settings className="w-5 h-5" />
           </button>

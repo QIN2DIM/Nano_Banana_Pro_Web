@@ -132,17 +132,23 @@ func (wp *WorkerPool) processTask(task *Task) {
 
 		// 5. 更新成功状态
 		now := time.Now()
-		model.DB.Model(task.TaskModel).Updates(map[string]interface{}{
-			"status":          "completed",
-			"image_url":       remoteURL,
-			"local_path":      localPath,
-			"thumbnail_url":   thumbRemoteURL,
-			"thumbnail_path":  thumbLocalPath,
-			"width":           width,
-			"height":          height,
-			"config_snapshot": configSnapshot,
-			"completed_at":    &now,
-		})
+		updates := map[string]interface{}{
+			"status":         "completed",
+			"image_url":      remoteURL,
+			"local_path":     localPath,
+			"thumbnail_url":  thumbRemoteURL,
+			"thumbnail_path": thumbLocalPath,
+			"width":          width,
+			"height":         height,
+			"completed_at":   &now,
+		}
+
+		// 兼容：历史版本可能未写入 config_snapshot，这里只在为空时补充
+		if task.TaskModel.ConfigSnapshot == "" && configSnapshot != "" {
+			updates["config_snapshot"] = configSnapshot
+		}
+
+		model.DB.Model(task.TaskModel).Updates(updates)
 		log.Printf("任务 %s 处理完成", task.TaskModel.TaskID)
 	} else {
 		wp.failTask(task.TaskModel, fmt.Errorf("未生成任何图片"))

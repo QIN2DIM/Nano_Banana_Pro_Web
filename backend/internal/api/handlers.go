@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -48,6 +49,49 @@ type GenerateRequest struct {
 	Params   map[string]interface{} `json:"params"`
 }
 
+func buildConfigSnapshot(providerName, modelID string, params map[string]interface{}) string {
+	if params == nil {
+		params = map[string]interface{}{}
+	}
+
+	snapshot := map[string]interface{}{
+		"provider": providerName,
+	}
+	if modelID != "" {
+		snapshot["model_id"] = modelID
+	}
+
+	// 兼容多种 key 命名（前端/后端/历史版本）
+	if v, ok := params["aspectRatio"].(string); ok && v != "" {
+		snapshot["aspectRatio"] = v
+	} else if v, ok := params["aspect_ratio"].(string); ok && v != "" {
+		snapshot["aspectRatio"] = v
+	} else if v, ok := params["aspect"].(string); ok && v != "" {
+		snapshot["aspectRatio"] = v
+	}
+
+	if v, ok := params["imageSize"].(string); ok && v != "" {
+		snapshot["imageSize"] = v
+	} else if v, ok := params["resolution_level"].(string); ok && v != "" {
+		snapshot["imageSize"] = v
+	} else if v, ok := params["image_size"].(string); ok && v != "" {
+		snapshot["imageSize"] = v
+	}
+
+	// count 可能是 float64（JSON 解析）或 int（服务内部）
+	if v, ok := params["count"].(int); ok && v > 0 {
+		snapshot["count"] = v
+	} else if v, ok := params["count"].(float64); ok && v > 0 {
+		snapshot["count"] = int(v)
+	}
+
+	b, err := json.Marshal(snapshot)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
 // ProviderConfigRequest 设置 Provider 配置请求
 type ProviderConfigRequest struct {
 	ProviderName string `json:"provider_name" binding:"required"`
@@ -67,7 +111,7 @@ func UpdateProviderConfigHandler(c *gin.Context) {
 		return
 	}
 
-	log.Printf("[API] 收到配置更新请求: Provider=%s, Base=%s, KeyLen=%d\n", 
+	log.Printf("[API] 收到配置更新请求: Provider=%s, Base=%s, KeyLen=%d\n",
 		req.ProviderName, req.APIBase, len(req.APIKey))
 
 	if model.DB == nil {
@@ -164,12 +208,13 @@ func GenerateHandler(c *gin.Context) {
 	}
 
 	taskModel := &model.Task{
-		TaskID:       taskID,
-		Prompt:       prompt,
-		ProviderName: req.Provider,
-		ModelID:      req.ModelID,
-		TotalCount:   1, // 目前单次请求只生成一张，后续可扩展
-		Status:       "pending",
+		TaskID:         taskID,
+		Prompt:         prompt,
+		ProviderName:   req.Provider,
+		ModelID:        req.ModelID,
+		TotalCount:     1, // 目前单次请求只生成一张，后续可扩展
+		Status:         "pending",
+		ConfigSnapshot: buildConfigSnapshot(req.Provider, req.ModelID, req.Params),
 	}
 
 	if count, ok := req.Params["count"].(float64); ok {
@@ -261,12 +306,13 @@ func GenerateWithImagesHandler(c *gin.Context) {
 
 	taskID := uuid.New().String()
 	taskModel := &model.Task{
-		TaskID:       taskID,
-		Prompt:       req.Prompt,
-		ProviderName: req.Provider,
-		ModelID:      req.ModelID,
-		TotalCount:   req.Count,
-		Status:       "pending",
+		TaskID:         taskID,
+		Prompt:         req.Prompt,
+		ProviderName:   req.Provider,
+		ModelID:        req.ModelID,
+		TotalCount:     req.Count,
+		Status:         "pending",
+		ConfigSnapshot: buildConfigSnapshot(req.Provider, req.ModelID, taskParams),
 	}
 
 	if err := model.DB.Create(taskModel).Error; err != nil {

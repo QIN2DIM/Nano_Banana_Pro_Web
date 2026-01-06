@@ -75,6 +75,9 @@ export function useWebSocket(taskId: string | null) {
       import.meta.env.VITE_WS_URL ||
       BASE_URL;
 
+    // BASE_URL 默认带 /api/v1，这里需要先去掉再拼接 ws 路径
+    wsBaseUrl = wsBaseUrl.replace(/\/api\/v1\/?$/, '');
+
     // http(s) -> ws(s)
     if (wsBaseUrl.startsWith('http://')) {
       wsBaseUrl = wsBaseUrl.replace(/^http:\/\//, 'ws://');

@@ -40,7 +40,7 @@ export function ProgressBar() {
     <div className="bg-blue-50 border-b border-blue-100 px-6 py-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-blue-600">正在生成中...</span>
+          <span className="text-sm font-medium text-blue-600">生成中...</span>
           {getConnectionStatus()}
         </div>
         <span className="text-xs text-blue-600 font-medium">{completedCount} / {totalCount}</span>

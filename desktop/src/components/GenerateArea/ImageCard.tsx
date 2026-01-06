@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Check, AlertCircle, Loader2, XCircle } from 'lucide-react';
 import { GeneratedImage } from '../../types';
 import { cn } from '../common/Button';
+import { formatDateTime } from '../../utils/date';
 
 interface ImageCardProps {
   image: GeneratedImage;
@@ -18,7 +19,37 @@ export const ImageCard = React.memo(function ImageCard({
   onClick,
   elapsed = '0.0'
 }: ImageCardProps) {
-  const isPending = image.status === 'pending' || !image.url;
+  const isFailed = image.status === 'failed';
+  const isPending = !isFailed && (image.status === 'pending' || !image.url);
+  const isSuccess = image.status === 'success' && Boolean(image.url);
+
+  const meta = useMemo(() => {
+    const w = image.width || 0;
+    const h = image.height || 0;
+
+    const resolutionLabel = (() => {
+      const max = Math.max(w, h);
+      if (max >= 3840) return '4K';
+      if (max >= 2048) return '2K';
+      if (max >= 1024) return '1K';
+      return max > 0 ? 'SD' : '—';
+    })();
+
+    const sizeLabel = w > 0 && h > 0 ? `${w}×${h}` : '—';
+
+    const timeLabel = (() => {
+      if (!image.createdAt) return '—';
+      try {
+        const d = new Date(image.createdAt);
+        if (Number.isNaN(d.getTime())) return '—';
+        return d.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch {
+        return '—';
+      }
+    })();
+
+    return { resolutionLabel, sizeLabel, timeLabel };
+  }, [image.width, image.height, image.createdAt]);
 
   // 使用 useMemo 优化规格信息解析
   const specs = useMemo(() => {
@@ -50,7 +81,7 @@ export const ImageCard = React.memo(function ImageCard({
         "group relative bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm transition-all duration-300 cursor-pointer flex flex-col",
         selected ? "ring-2 ring-blue-500 shadow-lg shadow-blue-100/50 scale-[0.98]" : "hover:shadow-md hover:-translate-y-0.5"
       )}
-      onClick={() => !isPending && onClick(image)}
+      onClick={() => isSuccess && onClick(image)}
     >
       {/* 图片/加载区域 - 统一正方形 */}
       <div className={cn(
@@ -74,7 +105,7 @@ export const ImageCard = React.memo(function ImageCard({
                   <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
                   <div className="w-1 h-1 bg-blue-600 rounded-full animate-bounce" />
                 </div>
-                <span className="text-sm font-bold text-blue-600 tracking-tight">正在生成</span>
+                <span className="text-sm font-bold text-blue-600 tracking-tight">生成中</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-100/50 rounded-full border border-blue-200/50">
                 <span className="text-[10px] font-bold font-mono text-blue-500 tabular-nums">
@@ -101,7 +132,7 @@ export const ImageCard = React.memo(function ImageCard({
               </div>
             </div>
           </div>
-        ) : image.status === 'success' ? (
+        ) : isSuccess ? (
           <div className="w-full h-full relative">
             <img
               src={image.thumbnailUrl || image.url}
@@ -152,17 +183,16 @@ export const ImageCard = React.memo(function ImageCard({
         </p>
 
         <div className="flex items-center justify-between text-[8px] sm:text-[9px] text-gray-400 pt-1 border-t border-gray-50 mt-auto">
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono">{elapsed}s</span>
-            <span className="text-gray-300">|</span>
-            <span className="truncate max-w-[60px]">{image.model || 'Gemini'}</span>
-          </div>
+          <span className="font-mono tabular-nums">
+            <span className="sm:hidden">{meta.timeLabel}</span>
+            <span className="hidden sm:inline">{formatDateTime(image.createdAt)}</span>
+          </span>
           <div className="flex items-center gap-1">
             <span className="bg-blue-50 text-blue-600 px-1 py-0.5 rounded font-black tracking-tighter border border-blue-100/50">
-              {specParts[1] || '1K'}
+              {meta.resolutionLabel}
             </span>
             <span className="bg-slate-100 text-slate-500 px-1 py-0.5 rounded font-bold tracking-tighter border border-slate-200/50">
-              {specParts[0] || '1:1'}
+              {meta.sizeLabel}
             </span>
           </div>
         </div>

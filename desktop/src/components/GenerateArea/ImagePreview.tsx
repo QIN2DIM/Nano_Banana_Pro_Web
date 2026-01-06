@@ -40,7 +40,7 @@ export const ImagePreview = React.memo(function ImagePreview({
     // 计算当前索引
     const currentIndex = image ? images.findIndex(img => img.id === image.id) : -1;
     const hasPrev = currentIndex > 0;
-    const hasNext = currentIndex < images.length - 1;
+    const hasNext = currentIndex >= 0 && currentIndex < images.length - 1;
 
     // 重置缩放
     const handleReset = useCallback(() => {
@@ -78,6 +78,9 @@ export const ImagePreview = React.memo(function ImagePreview({
 
     // 键盘监听 - 优化性能
     useEffect(() => {
+        // 仅在弹窗打开时监听键盘，避免背景组件也响应方向键导致“叠一层弹窗”
+        if (!image) return;
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'ArrowLeft') goToPrev();
             if (e.key === 'ArrowRight') goToNext();
@@ -85,7 +88,7 @@ export const ImagePreview = React.memo(function ImagePreview({
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [goToPrev, goToNext, handleClose]);
+    }, [image, goToPrev, goToNext, handleClose]);
 
     // 监听图片复制事件（image 变化时重新绑定，避免首次挂载 imageRef 为空导致不生效）
     useEffect(() => {

@@ -3,6 +3,43 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { GeneratedImage } from '../types';
 import { getImageUrl } from '../services/api';
 
+const IMAGE_SIZE_MAX_PX: Record<string, number> = {
+  '1K': 1024,
+  '2K': 2048,
+  '4K': 3840,
+};
+
+function parseAspectRatio(aspectRatio: string): { w: number; h: number } | null {
+  if (!aspectRatio) return null;
+  const m = aspectRatio.trim().match(/^(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)$/);
+  if (!m) return null;
+  const w = Number(m[1]);
+  const h = Number(m[2]);
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+  return { w, h };
+}
+
+function roundToMultiple(n: number, multiple: number) {
+  return Math.max(multiple, Math.round(n / multiple) * multiple);
+}
+
+function getExpectedDimensions(aspectRatio: string, imageSize: string): { width: number; height: number } | null {
+  const ratio = parseAspectRatio(aspectRatio);
+  const max = IMAGE_SIZE_MAX_PX[String(imageSize || '').toUpperCase()];
+  if (!ratio || !max) return null;
+
+  const r = ratio.w / ratio.h;
+  // 经验：按最长边=max，另一边按比例缩放；对齐到 8 的倍数，兼容常见模型尺寸约束
+  if (r >= 1) {
+    const width = max;
+    const height = roundToMultiple(max / r, 8);
+    return { width, height };
+  }
+  const height = max;
+  const width = roundToMultiple(max * r, 8);
+  return { width, height };
+}
+
 interface GenerateState {
   currentTab: 'generate' | 'history';
   isSidebarOpen: boolean; // 新增：持久化侧边栏状态
@@ -62,14 +99,15 @@ export const useGenerateStore = create<GenerateState>()(
       setSubmitting: (isSubmitting) => set({ isSubmitting }),
 
       startTask: (taskId, totalCount, config) => {
+        const expected = getExpectedDimensions(config.aspectRatio, config.imageSize);
         const placeholders: GeneratedImage[] = Array.from({ length: totalCount }).map((_, i) => ({
             id: `temp-${Date.now()}-${i}`,
             taskId,
             filePath: '',
             thumbnailPath: '',
             fileSize: 0,
-            width: 0,
-            height: 0,
+            width: expected?.width || 0,
+            height: expected?.height || 0,
             mimeType: '',
             createdAt: new Date().toISOString(),
             status: 'pending' as const,
@@ -101,21 +139,31 @@ export const useGenerateStore = create<GenerateState>()(
       updateProgress: (completedCount, image) => set((state) => {
         let newImages = [...state.images];
         if (image) {
+            const { width, height, ...rest } = image as any;
+            const url = getImageUrl(image.url || image.filePath || image.thumbnailPath || image.thumbnailUrl || '');
+            const thumbnailUrl = getImageUrl(image.thumbnailUrl || image.thumbnailPath || image.filePath || image.url || '');
+            const status: GeneratedImage['status'] = image.status === 'failed'
+              ? 'failed'
+              : (!url ? 'pending' : (image.status ?? 'success'));
+
             const imageWithUrl = {
-                ...image,
-                url: getImageUrl(image.filePath),
-                status: 'success' as const
+                ...rest,
+                ...(typeof width === 'number' && width > 0 ? { width } : {}),
+                ...(typeof height === 'number' && height > 0 ? { height } : {}),
+                url,
+                thumbnailUrl,
+                status
             };
 
             // Bug #7修复：首先检查是否已存在该图片ID，存在则更新
             const existingIndex = newImages.findIndex(img => img.id === image.id);
             if (existingIndex !== -1) {
-                newImages[existingIndex] = imageWithUrl;
+                newImages[existingIndex] = { ...newImages[existingIndex], ...imageWithUrl };
             } else {
                 // 不存在则替换第一个pending占位符
-                const placeholderIndex = newImages.findIndex(img => img.status === 'pending');
+                const placeholderIndex = newImages.findIndex(img => img.status === 'pending' && img.taskId === state.taskId);
                 if (placeholderIndex !== -1) {
-                    newImages[placeholderIndex] = imageWithUrl;
+                    newImages[placeholderIndex] = { ...newImages[placeholderIndex], ...imageWithUrl };
                 } else {
                     // 没有占位符则添加新图片
                     newImages.push(imageWithUrl);
@@ -135,19 +183,29 @@ export const useGenerateStore = create<GenerateState>()(
 
         // 批量处理所有图片
         images.forEach(image => {
+          const { width, height, ...rest } = image as any;
+          const url = getImageUrl(image.url || image.filePath || image.thumbnailPath || image.thumbnailUrl || '');
+          const thumbnailUrl = getImageUrl(image.thumbnailUrl || image.thumbnailPath || image.filePath || image.url || '');
+          const status: GeneratedImage['status'] = image.status === 'failed'
+            ? 'failed'
+            : (!url ? 'pending' : (image.status ?? 'success'));
+
           const imageWithUrl = {
-            ...image,
-            url: getImageUrl(image.filePath),
-            status: 'success' as const
+            ...rest,
+            ...(typeof width === 'number' && width > 0 ? { width } : {}),
+            ...(typeof height === 'number' && height > 0 ? { height } : {}),
+            url,
+            thumbnailUrl,
+            status
           };
 
           const existingIndex = newImages.findIndex(img => img.id === image.id);
           if (existingIndex !== -1) {
-            newImages[existingIndex] = imageWithUrl;
+            newImages[existingIndex] = { ...newImages[existingIndex], ...imageWithUrl };
           } else {
-            const placeholderIndex = newImages.findIndex(img => img.status === 'pending');
+            const placeholderIndex = newImages.findIndex(img => img.status === 'pending' && img.taskId === state.taskId);
             if (placeholderIndex !== -1) {
-              newImages[placeholderIndex] = imageWithUrl;
+              newImages[placeholderIndex] = { ...newImages[placeholderIndex], ...imageWithUrl };
             } else {
               newImages.push(imageWithUrl);
             }
@@ -161,18 +219,34 @@ export const useGenerateStore = create<GenerateState>()(
         };
       }),
 
-      completeTask: () => set({
-        status: 'completed',
-        connectionMode: 'none',
-        taskId: null,
-        startTime: null
+      completeTask: () => set((state) => {
+        const finishedTaskId = state.taskId;
+        const images = finishedTaskId
+          ? state.images.filter((img) => !(img.taskId === finishedTaskId && img.status === 'pending'))
+          : state.images;
+
+        return {
+          status: 'completed',
+          connectionMode: 'none',
+          taskId: null,
+          startTime: null,
+          images
+        };
       }),
-      failTask: (error) => set({
-        status: 'failed',
-        error,
-        connectionMode: 'none',
-        taskId: null,
-        startTime: null
+      failTask: (error) => set((state) => {
+        const finishedTaskId = state.taskId;
+        const images = finishedTaskId
+          ? state.images.filter((img) => !(img.taskId === finishedTaskId && img.status === 'pending'))
+          : state.images;
+
+        return {
+          status: 'failed',
+          error,
+          connectionMode: 'none',
+          taskId: null,
+          startTime: null,
+          images
+        };
       }),
       dismissError: () => set((state) => ({
         ...state,
