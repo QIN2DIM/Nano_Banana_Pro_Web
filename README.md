@@ -1,4 +1,4 @@
-# 大香蕉图片生成工具 (Banana Pro Web)
+# 🎨 大香蕉 AI (Banana Pro Web & Desktop)
 
 <p align="center">
   <img src="assets/preview.png" alt="Banana Pro Web 预览" width="800">
@@ -6,109 +6,103 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.3.1-blue.svg)
-![Go](https://img.shields.io/badge/Go-1.24.3-00ADD8.svg)
-![Gemini](https://img.shields.io/badge/GenAI%20SDK-1.40.0-orange.svg)
+![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131.svg)
+![Go](https://img.shields.io/badge/Go-1.21-00ADD8.svg)
 
-大香蕉图片生成工具 是一个高性能、易扩展的批量图片生成平台，专为创意工作者设计。它基于 Google Gemini API，支持高分辨率（最高 4K）的文生图与图生图功能，并提供直观的批量任务管理界面。
+**大香蕉 AI** 是一款专为创意工作者打造的高性能图片生成平台。它完美融合了 Google Gemini 的强大 AI 能力与桌面端的原生性能，支持高分辨率（最高 4K）的文生图与图生图功能。
+
+---
 
 ## 🌟 核心特性
 
-- **🚀 极速生成**：基于 Go 语言后端与 Worker 池化技术，支持多任务并发处理。
-- **🎨 4K 超清支持**：深度优化 Gemini 3.0 模型参数，支持多种画幅的 4K 超清生成。
-- **📸 智能图生图**：支持多张参考图输入，精准控制生成风格与内容。
-- **📦 批量处理**：一键开启批量生成模式，实时进度监控。
-- **💾 历史记录管理**：完整的任务历史追踪，支持失败任务重试与本地缓存恢复。
-- **🔌 灵活扩展**：模块化 Provider 设计，可轻松接入其他主流 AI 模型。
+- **🚀 极致性能**：采用 **Tauri 2.0** 架构，配合 **Go 语言** 编写的高并发 Sidecar 后端，资源占用极低。
+- **🖼️ 4K 超清创作**：深度优化 Gemini 3.0 模型，支持多种画幅的 4K 超清图像生成。
+- **⚡ 自定义协议 (asset://)**：在桌面端注册原生资源协议，绕过 HTTP 协议栈，本地图片加载速度提升 300%。
+- **💾 智能历史管理**：内置本地数据库与持久化缓存，支持任务状态自动恢复与大批量历史记录秒开。
+- **📸 精准图生图**：支持多参考图输入，提供细腻的风格与构图控制。
+- **📦 自动化交付**：集成 GitHub Actions，实现 macOS (Intel/M1) 与 Windows 平台的自动化打包发布。
+
+---
 
 ## 🏗️ 技术架构
 
-### 核心流程图
-```mermaid
-graph TD
-    A[前端 React + Zustand] -->|WebSocket/Polling| B[后端 API 接口]
-    B -->|Task Dispatch| C[Worker 线程池]
-    C -->|API Request| D[Google Gemini Provider]
-    D -->|Process| E[Imagen 3.0 Model]
-    E -->|Image Data| D
-    D -->|Save File| F[本地存储/SQLite]
-    F -->|Notify| A
+项目采用“三层架构”设计，确保了性能与扩展性的平衡：
+
+1. **前端 (React + Zustand)**：负责响应式 UI 与状态管理，提供流畅的用户交互。
+2. **桌面容器 (Tauri)**：作为 Rust 桥梁，处理窗口控制、本地资源访问及 Sidecar 进程管理。
+3. **推理引擎 (Go Sidecar)**：负责与 Google GenAI SDK 通讯，处理 Worker 任务池与本地图片存储。
+
+### 核心优化点
+- **IPC 负荷优化**：前端与后端之间仅传递文件路径，大型二进制数据通过 `asset://` 协议直接由前端读取。
+- **进程生命周期管理**：Tauri 退出时自动清理 Go 边车进程，防止系统资源泄漏。
+
+---
+
+## 📂 项目结构
+
+```bash
+├── backend/            # Go 语言编写的推理后端 (Sidecar)
+│   ├── cmd/server/     # 服务入口
+│   └── internal/       # 核心逻辑 (Gemini 适配器、Worker 池、数据库)
+├── desktop/            # Tauri 桌面端项目 (React + Rust)
+│   ├── src/            # 前端组件与业务逻辑
+│   └── src-tauri/      # Rust 容器配置与系统权限定义
+├── frontend/           # 独立 Web 版前端 (保留参考)
+└── assets/             # 项目展示资源 (预览图等)
 ```
 
-### 关键设计
-- **任务调度系统**：采用并发安全的 Worker 池，有效平衡服务器负载，防止大批量请求导致的系统崩溃。
-- **多级缓存策略**：前端采用 Zustand 内存缓存，后端采用 SQLite 持久化存储，确保任务状态在刷新后仍能恢复。
-- **响应式 UI**：基于 Tailwind CSS 构建的三栏式布局，完美适配不同尺寸的显示器。
+---
 
-## 💻 技术栈
-
-| 模块 | 技术 | 描述 |
-| :--- | :--- | :--- |
-| **后端** | Go v1.24.3 | 高性能并发处理 |
-| **API** | Gin v1.11.0 | 灵活的 RESTful 路由 |
-| **模型** | Google GenAI SDK | 深度对接 Imagen 3.0 |
-| **数据库** | SQLite + GORM | 轻量级 ORM 数据存储 |
-| **前端** | React v18.3.1 | 组件化界面开发 |
-| **状态** | Zustand v5.0.2 | 极简响应式状态流 |
-| **样式** | Tailwind CSS | 原子化现代样式系统 |
-
-## 💻 桌面端支持 (Tauri)
-
-本项目已适配 Tauri 桌面端框架，支持打包为原生 macOS 应用。
-
-### 特性
-- **原生体验**: 基于系统原生 WebView，资源占用低。
-- **离线后端**: 自动运行 Go 边车 (Sidecar) 服务，无需手动启动后端。
-- **一键打包**: 支持生成 `.app` 和 `.dmg` 安装包。
-
-### 打包步骤
-1. 安装 Rust 环境与 Tauri CLI。
-2. 进入 `desktop` 目录：`cd desktop`
-3. 编译后端 Sidecar：`export GOOS=darwin GOARCH=arm64 && go build -o src-tauri/bin/server-aarch64-apple-darwin ../backend/cmd/server/main.go`
-4. 执行打包命令：`npm run tauri build`
-
-## 🚀 快速启动
+## 💻 开发者指南
 
 ### 1. 环境准备
-- Go 1.22+
-- Node.js 18+
-- Google Gemini API Key
+- **Go**: 1.21+
+- **Node.js**: 18+ (建议使用 20)
+- **Rust**: 1.75+ (Tauri 构建必备)
+- **Google Gemini API Key**
 
-### 2. 后端配置
+### 2. 后端开发
 ```bash
 cd backend
-# 编辑配置文件 configs/config.yaml，填入 providers.gemini.api_key
+# 复制并配置 config.yaml 填入您的 API Key
 go run cmd/server/main.go
 ```
 
-### 3. 前端启动
+### 3. 桌面端开发
 ```bash
-cd frontend
+cd desktop
 npm install
-npm run dev
+npm run tauri dev
 ```
 
-## ⚙️ 核心配置项
+### 4. 自动化构建 (GitHub Actions)
+只需推送带有版本号的标签（如 `v0.1.3`），即可触发自动化构建：
+```bash
+git tag v0.1.3
+git push origin v0.1.3
+```
 
-| 配置项 | 描述 | 示例 |
-| :--- | :--- | :--- |
-| `providers.gemini.api_key` | Gemini API 密钥 | `AIzaSy...` |
-| `storage.local_dir` | 图片存储路径 | `storage/local` |
-| `VITE_API_URL` | 前端 API 基础路径 | `http://localhost:8080/api/v1` |
+---
 
-## �️ 功能路线图 (Roadmap)
+## ⚙️ 核心配置
 
-- [x] **v1.0.0**: 核心功能发布，支持 4K 文生图与批量生成。
-- [x] **v1.1.0**: 深度集成图生图（Image-to-Image）逻辑。
-- [ ] **v1.2.0**: 支持多模型对比生成模式。
-- [ ] **v1.3.0**: 增加图片在线编辑（Canvas）与局部重绘功能。
-- [ ] **v2.0.0**: 接入更多主流 Provider（如 Midjourney, Flux）。
+| 配置项 | 描述 |
+| :--- | :--- |
+| `Gemini API Key` | 决定了 AI 生成的配额，请在应用设置或配置文件中填入。 |
+| `Storage Dir` | 应用默认将图片保存在系统的 `AppData` (Win) 或 `Application Support` (Mac) 目录下。 |
+| `asset://` | 自定义资源协议，用于安全、快速地访问本地生成的图片。 |
 
-## 🤝 参与贡献
+---
 
-我们欢迎任何形式的贡献，包括但不限于：
-1. **反馈 Bug**：通过 GitHub Issue 提交。
-2. **提交代码**：请遵循现有的代码风格，并提交 Pull Request。
-3. **完善文档**：帮助修正错别字或增加使用技巧。
+## 🤝 贡献与反馈
+
+我们欢迎任何形式的贡献！如果您在使用过程中遇到问题，请通过 GitHub Issue 提交。
+
+- **反馈 Bug**：提供详细的复现步骤与系统环境。
+- **提交 PR**：请遵循现有的代码风格，并在提交前进行充分测试。
+
+---
 
 ## 📄 开源协议
+
 本项目采用 [MIT License](LICENSE) 协议开源。
