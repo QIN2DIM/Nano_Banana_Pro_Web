@@ -9,7 +9,8 @@ import (
 
 type Config struct {
 	Server struct {
-		Port int `mapstructure:"port"`
+		Port int    `mapstructure:"port"`
+		Host string `mapstructure:"host"`
 	} `mapstructure:"server"`
 	Database struct {
 		Path string `mapstructure:"path"`
@@ -28,6 +29,7 @@ type Config struct {
 	Providers map[string]struct {
 		APIKey  string `mapstructure:"api_key"`
 		APIBase string `mapstructure:"api_base"`
+		ModelID string `mapstructure:"model_id"`
 		Enabled bool   `mapstructure:"enabled"`
 	} `mapstructure:"providers"`
 	Prompts struct {
@@ -195,6 +197,7 @@ func InitConfig() {
 	viper.SetDefault("database.path", "data.db")
 	viper.SetDefault("storage.local_dir", "storage")
 	viper.SetDefault("server.port", 8080)
+	viper.SetDefault("server.host", "127.0.0.1")
 	viper.SetDefault("prompts.optimize_system", DefaultOptimizeSystemPrompt)
 	viper.SetDefault("prompts.optimize_system_json", DefaultOptimizeSystemJSONPrompt)
 	viper.SetDefault("templates.remote_url", "https://raw.githubusercontent.com/ShellMonster/Nano_Banana_Pro_Web/refs/heads/main/backend/internal/templates/assets/templates.json")

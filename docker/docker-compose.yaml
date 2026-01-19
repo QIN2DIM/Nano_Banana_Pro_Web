@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_PATH=/app/data/data.db
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./volumes/backend/configs:/app/configs
+      - ./volumes/backend/storage:/app/storage
+      - ./volumes/backend/data:/app/data
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    restart: always
+    ports:
+      - "35877:80"
+    depends_on:
+      - backend

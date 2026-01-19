@@ -80,6 +80,9 @@ export function useWebSocket(taskId: string | null) {
       wsBaseUrl = `${window.location.origin}${wsBaseUrl}`;
     }
 
+    // 去掉 /api/v1 后缀，避免拼出 /api/v1/ws
+    wsBaseUrl = wsBaseUrl.replace(/\/api\/v1\/?$/, '');
+
     // http(s) -> ws(s)
     if (wsBaseUrl.startsWith('http://')) {
       wsBaseUrl = wsBaseUrl.replace(/^http:\/\//, 'ws://');
@@ -119,6 +122,15 @@ export function useWebSocket(taskId: string | null) {
       console.log('WebSocket Connected');
       connectTimeRef.current = Date.now(); // 记录连接时间
       if (isMountedRef.current) {
+        // 竞态条件防护：如果已切到 polling，避免 websocket 把模式切回去导致卡住
+        const currentMode = useGenerateStore.getState().connectionMode;
+        const currentSource = getUpdateSource();
+        if (currentMode === 'polling' || currentSource === 'polling') {
+          console.log('[WebSocket] Opened but polling is active, closing websocket');
+          ws.close();
+          return;
+        }
+
         // 竞态条件修复：WebSocket 连接成功时设置为活跃更新源
         setUpdateSource('websocket');
         storeRef.current.setConnectionMode('websocket');

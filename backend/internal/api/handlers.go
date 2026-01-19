@@ -146,7 +146,7 @@ func UpdateProviderConfigHandler(c *gin.Context) {
 	if err != nil {
 		log.Printf("[API] 配置不存在，准备创建: %s\n", req.ProviderName)
 		// 不存在则创建
-		modelsJSON := buildModelsJSON(req.ProviderName, req.ModelID, "")
+		modelsJSON := provider.BuildModelsJSON(req.ProviderName, req.ModelID, "")
 		configData = model.ProviderConfig{
 			ProviderName: req.ProviderName,
 			DisplayName:  req.DisplayName,
@@ -171,7 +171,7 @@ func UpdateProviderConfigHandler(c *gin.Context) {
 		if req.DisplayName != "" {
 			updates["display_name"] = req.DisplayName
 		}
-		if modelsJSON := buildModelsJSON(req.ProviderName, req.ModelID, configData.Models); modelsJSON != "" {
+		if modelsJSON := provider.BuildModelsJSON(req.ProviderName, req.ModelID, configData.Models); modelsJSON != "" {
 			updates["models"] = modelsJSON
 		}
 		if err := model.DB.Model(&configData).Updates(updates).Error; err != nil {
@@ -669,24 +669,7 @@ func callOpenAIOptimize(ctx context.Context, cfg *model.ProviderConfig, modelNam
 	return optimized, nil
 }
 
-func buildModelsJSON(_ string, modelID, _ string) string {
-	modelID = strings.TrimSpace(modelID)
-	if modelID == "" {
-		return ""
-	}
-	payload := []map[string]interface{}{
-		{
-			"id":      modelID,
-			"name":    modelID,
-			"default": true,
-		},
-	}
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return ""
-	}
-	return string(data)
-}
+
 
 func formatOpenAIClientError(err error) string {
 	var apiErr *openai.Error

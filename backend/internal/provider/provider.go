@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"image-gen-service/internal/config"
 	"image-gen-service/internal/model"
 	"log"
+	"strings"
 	"sync"
 )
 
@@ -61,14 +63,26 @@ func InitProviders() error {
 		}
 	}
 
-	// 1. 将配置文件中的配置同步到数据库（如果不存在）
+	// 1. 将配置文件中的配置同步到数据库
 	for name, cfg := range config.GlobalConfig.Providers {
-		if !cfg.Enabled {
+		// 如果配置文件中未启用，或者是空的配置，跳过
+		if !cfg.Enabled && cfg.APIKey == "" {
 			continue
 		}
 
 		var dbCfg model.ProviderConfig
 		err := model.DB.Where("provider_name = ?", name).First(&dbCfg).Error
+
+		// 构造更新/创建的数据
+		updateData := map[string]interface{}{
+			"api_key":  cfg.APIKey,
+			"api_base": cfg.APIBase,
+			"enabled":  true, // 如果配置文件里设置了，强制启用
+		}
+		if cfg.ModelID != "" {
+			updateData["models"] = BuildModelsJSON(name, cfg.ModelID, "")
+		}
+
 		if err != nil {
 			// 不存在，从配置文件创建
 			dbCfg = model.ProviderConfig{
@@ -78,7 +92,17 @@ func InitProviders() error {
 				APIBase:      cfg.APIBase,
 				Enabled:      true,
 			}
+			if cfg.ModelID != "" {
+				dbCfg.Models = BuildModelsJSON(name, cfg.ModelID, "")
+			}
 			model.DB.Create(&dbCfg)
+			log.Printf("[Init] 从环境变量/配置文件初始化了 %s", name)
+		} else {
+			// 已存在，强制更新（如果配置文件里有值）
+			if cfg.APIKey != "" || cfg.APIBase != "" || cfg.ModelID != "" {
+				model.DB.Model(&dbCfg).Updates(updateData)
+				log.Printf("[Init] 从环境变量/配置文件更新了 %s 的配置", name)
+			}
 		}
 	}
 
@@ -123,4 +147,24 @@ func InitProviders() error {
 
 	log.Printf("所有 Provider 已重新加载，当前生效数量: %d", len(newRegistry))
 	return nil
+}
+
+// BuildModelsJSON 构造模型列表 JSON
+func BuildModelsJSON(_ string, modelID, _ string) string {
+	modelID = strings.TrimSpace(modelID)
+	if modelID == "" {
+		return ""
+	}
+	payload := []map[string]interface{}{
+		{
+			"id":      modelID,
+			"name":    modelID,
+			"default": true,
+		},
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }

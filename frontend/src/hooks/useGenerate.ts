@@ -10,7 +10,8 @@ import { useHistoryStore } from '../store/historyStore';
 import i18n from '../i18n';
 
 // WebSocket 超时时间（毫秒）- 超过此时间无消息则启动轮询
-const WS_TIMEOUT = 15000;
+// 本地后端通常不会推实时进度，过长会导致用户“卡住”的观感
+const WS_TIMEOUT = 3000;
 // 轮询间隔（毫秒）
 const POLL_INTERVAL = 3000;
 // 最大轮询重试次数（降低到 6 次，避免用户等待过久）
@@ -32,7 +33,6 @@ export function useGenerate() {
   const isPollingRef = useRef(false);
   const pollRetryCountRef = useRef(0); // 轮询重试计数器
   const wsCloseRequestedRef = useRef(false); // 标记是否主动请求关闭WebSocket
-  const hasStartedRef = useRef(false); // 标记是否已启动过轮询
   const basePollIntervalRef = useRef(POLL_INTERVAL); // 基础轮询间隔，用于指数退避
   const expectedTaskIdRef = useRef<string | null>(null); // 记录期望的任务ID，防止闭包陷阱
 
@@ -72,17 +72,15 @@ export function useGenerate() {
 
   // 轮询函数：检查任务状态
   const startPolling = useCallback(async (currentTaskId: string) => {
-    if (isPollingRef.current || status !== 'processing') {
+    const currentState = useGenerateStore.getState();
+    if (isPollingRef.current || currentState.status !== 'processing' || currentState.taskId !== currentTaskId) {
       return;
     }
 
-    // 竞态条件修复：检查是否有其他更新源正在运行
+    // 进入 polling 模式时由 polling 接管更新源（避免 websocket 标记残留导致轮询无法启动）
     if (getUpdateSource() === 'websocket') {
-      console.log('[race guard] WebSocket still active, waiting');
-      return;
+      setUpdateSource(null);
     }
-
-    // 设置当前更新源为 polling
     setUpdateSource('polling');
 
     isPollingRef.current = true;
@@ -101,6 +99,8 @@ export function useGenerate() {
         // 竞态条件修复：再次检查当前更新源
         if (getUpdateSource() !== 'polling') {
           console.log('[race guard] polling interrupted, source switched');
+          // 允许后续再次启动轮询（避免卡住）
+          isPollingRef.current = false;
           return;
         }
 
@@ -158,17 +158,13 @@ export function useGenerate() {
 
     // 开始轮询
     poll();
-  }, [status, stopPolling]);
+  }, [stopPolling]);
 
   // 监听 connectionMode 变化，当切换到 polling 时自动启动轮询
   useEffect(() => {
-    if (connectionMode === 'polling' && status === 'processing' && taskId && !isPollingRef.current && !hasStartedRef.current) {
+    if (connectionMode === 'polling' && status === 'processing' && taskId && !isPollingRef.current) {
       console.log('Detected polling mode, starting poll');
-      hasStartedRef.current = true;
       startPolling(taskId);
-    } else if (connectionMode === 'none' && status === 'idle') {
-      // 只在任务回到 idle 状态时重置标记
-      hasStartedRef.current = false;
     }
   }, [connectionMode, status, taskId, startPolling]);
 
@@ -193,11 +189,6 @@ export function useGenerate() {
   }, []);
 
   const generate = async () => {
-    if (!config.imageApiKey) {
-      toast.error(i18n.t('generate.toast.missingApiKey'));
-      return;
-    }
-
     resetPromptHistory(config.prompt);
     setSubmitting(true);
     setIsInternalSubmitting(true);
@@ -219,7 +210,7 @@ export function useGenerate() {
         formData.append('aspectRatio', config.aspectRatio);
         formData.append('imageSize', config.imageSize);
         formData.append('count', config.count.toString());
-        
+
         // 添加所有参考图片
         config.refFiles.forEach((file) => {
           formData.append('refImages', file);
@@ -252,9 +243,9 @@ export function useGenerate() {
 
       // 启动任务
       startTask(newTaskId, config.count, {
-          prompt: config.prompt,
-          aspectRatio: config.aspectRatio,
-          imageSize: config.imageSize
+        prompt: config.prompt,
+        aspectRatio: config.aspectRatio,
+        imageSize: config.imageSize
       });
 
       // 生成区与历史区同步：先写入一条本地任务占位，避免历史列表不刷新导致状态不同步

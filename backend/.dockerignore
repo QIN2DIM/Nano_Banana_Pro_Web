@@ -1,0 +1,13 @@
+.git
+.vscode
+.env
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin
+vendor
+/tmp
+/out
+/dist

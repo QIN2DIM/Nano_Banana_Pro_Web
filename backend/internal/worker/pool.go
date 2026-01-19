@@ -13,6 +13,16 @@ import (
 	"image-gen-service/internal/storage"
 )
 
+// TaskNotifier 任务通知接口，用于解耦 WebSocket 通知
+type TaskNotifier interface {
+	NotifyComplete(taskID string, task *model.Task)
+	NotifyError(taskID string, errMsg string)
+	NotifyProgress(taskID string, completedCount, totalCount int, image interface{})
+}
+
+// 全局通知器，由 api 包注册
+var Notifier TaskNotifier
+
 // Task 表示一个生成任务
 type Task struct {
 	TaskModel *model.Task
@@ -150,6 +160,15 @@ func (wp *WorkerPool) processTask(task *Task) {
 
 		model.DB.Model(task.TaskModel).Updates(updates)
 		log.Printf("任务 %s 处理完成", task.TaskModel.TaskID)
+
+		// 通知 WebSocket 订阅者任务完成
+		if Notifier != nil {
+			// 重新查询任务获取最新数据
+			var updatedTask model.Task
+			if err := model.DB.Where("task_id = ?", task.TaskModel.TaskID).First(&updatedTask).Error; err == nil {
+				Notifier.NotifyComplete(task.TaskModel.TaskID, &updatedTask)
+			}
+		}
 	} else {
 		wp.failTask(task.TaskModel, fmt.Errorf("未生成任何图片"))
 	}
@@ -161,4 +180,9 @@ func (wp *WorkerPool) failTask(taskModel *model.Task, err error) {
 		"status":        "failed",
 		"error_message": err.Error(),
 	})
+
+	// 通知 WebSocket 订阅者任务失败
+	if Notifier != nil {
+		Notifier.NotifyError(taskModel.TaskID, err.Error())
+	}
 }

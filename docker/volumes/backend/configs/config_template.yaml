@@ -1,0 +1,21 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+
+database:
+  path: /app/data/data.db
+
+storage:
+  local_dir: /app/storage
+
+providers:
+  gemini:
+    enabled: true
+    api_key: ""
+    api_base: "https://generativelanguage.googleapis.com"
+    model_id: "gemini-3-pro-image-preview"
+  openai:
+    enabled: false
+    api_key: ""
+    api_base: "https://generativelanguage.googleapis.com"
+    model_id: "gemini-3-flash-preview"

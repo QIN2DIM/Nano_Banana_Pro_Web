@@ -72,6 +72,9 @@ func main() {
 	worker.InitPool(6, 100)
 	worker.Pool.Start()
 
+	// 4.5 初始化 WebSocket 通知器
+	api.InitWSNotifier()
+
 	// 5. 注册 Provider
 	provider.InitProviders()
 
@@ -116,6 +119,8 @@ func main() {
 		v1.GET("/images", api.ListImagesHandler)
 		v1.DELETE("/images/:id", api.DeleteImageHandler)
 		v1.GET("/images/:id/download", api.DownloadImageHandler)
+		// WebSocket 路由：实时任务进度推送
+		v1.GET("/ws/generate/:task_id", api.GenerateWSHandler)
 	}
 
 	// 静态资源访问 (将 storage 目录整体暴露，以匹配数据库中的 storage/local/xxx.jpg 路径)
@@ -126,29 +131,30 @@ func main() {
 	}).Static("", "storage")
 
 	// 6. 端口探测与启动
-	port := 8080
+	port := config.GlobalConfig.Server.Port
+	host := config.GlobalConfig.Server.Host
 	var ln net.Listener
 	var err error
 
-	log.Printf("Starting port discovery from %d...", port)
+	log.Printf("Starting port discovery from %s:%d...", host, port)
 
-	// 尝试从 8080 开始寻找可用端口
-	// 强制绑定到 127.0.0.1 避免 macOS 沙盒拦截 0.0.0.0
+	// 尝试从配置端口开始寻找可用端口
+	// 默认绑定到 127.0.0.1 避免 macOS 沙盒拦截 0.0.0.0，但在 Docker 环境下需配置为 0.0.0.0
 	for i := 0; i < 100; i++ {
-		addr := "127.0.0.1:" + strconv.Itoa(port+i)
+		addr := fmt.Sprintf("%s:%d", host, port+i)
 		ln, err = net.Listen("tcp", addr)
 		if err == nil {
 			port = port + i
 			break
 		}
-		log.Printf("Port %d is busy, trying next...", port+i)
+		log.Printf("Port %d at %s is busy, trying next...", port+i, host)
 	}
 
 	if err != nil {
-		log.Fatalf("Fatal: Could not find any available port: %v", err)
+		log.Fatalf("Fatal: Could not find any available port at %s: %v", host, err)
 	}
 
-	log.Printf("Successfully bound to 127.0.0.1:%d", port)
+	log.Printf("Successfully bound to %s:%d", host, port)
 
 	// 如果是在 Tauri 边车模式下，将实际监听的端口打印到标准输出，方便前端发现
 	fmt.Printf("SERVER_PORT=%d\n", port)
