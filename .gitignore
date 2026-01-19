@@ -68,3 +68,5 @@ desktop/dist/
 templates.json
 templates_nano_banana_pro.json
 TEMPLATE_MARKET_PLAN.md
+
+docker/.env
